@@ -1,0 +1,7 @@
+# .dockerignore - Exclude local databases, secrets, tests, and caches from the image.
+.env
+*.db*
+__pycache__
+.pytest_cache
+tests
+.venv

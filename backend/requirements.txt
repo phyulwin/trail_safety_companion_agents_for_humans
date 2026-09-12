@@ -1,0 +1,14 @@
+# requirements.txt - Direct versions validated for this MVP.
+fastapi==0.141.1
+uvicorn[standard]==0.52.4
+sqlalchemy==2.0.52
+pydantic-settings==2.15.0
+email-validator==2.3.0
+PyJWT==2.14.0
+pwdlib[argon2]==0.3.1
+strands-agents==1.55.1
+strands-agents-tools==0.8.8
+numpy==2.5.3
+scikit-learn==1.9.1
+httpx==0.28.1
+pytest==9.1.1

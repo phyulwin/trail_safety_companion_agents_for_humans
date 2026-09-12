@@ -1,0 +1,22 @@
+# docker-compose.yml - One API worker and durable local database behind the frontend.
+services:
+  backend:
+    build: ./backend
+    env_file: .env
+    environment:
+      DATABASE_URL: sqlite:////data/trail.db
+      JWT_SECRET: ${JWT_SECRET:?Generate .env with python scripts/setup_env.py first}
+      CORS_ORIGINS: http://localhost:8080,http://127.0.0.1:8080
+    volumes:
+      - trail-data:/data
+    restart: unless-stopped
+  frontend:
+    build: ./frontend
+    ports:
+      - "127.0.0.1:8080:8080"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+volumes:
+  trail-data:

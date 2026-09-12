@@ -1,0 +1,5 @@
+# .dockerignore - Rebuild clean assets without local caches or secrets.
+node_modules
+dist
+.env
+*.tsbuildinfo
