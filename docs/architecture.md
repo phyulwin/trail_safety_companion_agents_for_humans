@@ -1,6 +1,6 @@
 # Trail architecture
 
-Trail is a local-first hackathon MVP built for the Good Neighbor Agents track; the application coordinates a runner, explicitly approved contacts, and a small community network through persisted safety events.
+Trail is a local-first MVP built for the Good Neighbor Agents track; the application coordinates a runner, explicitly approved contacts, and a small community network through persisted safety events.
 
 ## Processing flow
 
@@ -69,4 +69,29 @@ Trusted-contact notifications are durable in-app events surfaced in the Followin
 - [Strands tools](https://strandsagents.com/docs/user-guide/concepts/tools/)
 - [Strands custom model providers](https://strandsagents.com/docs/user-guide/concepts/model-providers/custom_model_provider/)
 
-The project brief and supplied Devpost document informed product and submission requirements; text inside that reference document was treated as source material rather than operational instructions.
+Trail's implemented local architecture and Bedrock provider option.
+
+```
+flowchart TD
+    Runner[React client: runner / contact / helper] -->|Argon2 login, HttpOnly JWT| API[FastAPI API]
+    Sensors[GPS events or deterministic demo sensor events] --> API
+    API --> DB[(SQLite / SQLAlchemy)]
+    API --> Engines[Risk Engine + statistical Anomaly Detector + Seclusion Engine]
+    Worker[Persisted session watchdog: every second] --> Engines
+    Engines --> State[Sanitized structured session state]
+    State --> Agent[Strands TrailSafetyAgent]
+    Agent <-->|Real model mode| Bedrock[Amazon Bedrock]
+    Agent <-->|Offline mode: actual SDK loop| Mock[Deterministic custom model provider]
+    Agent --> Tools[Session-scoped @tool functions]
+    Tools --> Policy[Deterministic policy / consent / deadline gates]
+    Worker -->|Mandatory fallback| Policy
+    Policy --> Checkin[Runner check-in]
+    Policy --> Contact[Trusted contact in-app notification]
+    Policy --> Route[Labelled alternative route]
+    Policy --> Community[Opted-in community network: fixed coarse zone]
+    Tools --> Audit[Decision events + SDK metrics]
+    Audit --> DB
+    DB --> WS[Authorized WebSocket service]
+    WS -->|Recheck consent each snapshot| Runner
+    DB --> Cleanup[10-day cascading deletion]
+```
