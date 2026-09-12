@@ -220,12 +220,6 @@ Next priorities are durable scheduling outside request transactions, native mobi
 
 OpenStreetMap tiles require network access and reveal the viewed map area to the tile provider; the application still stores routes and runs its offline agent without paid AI APIs, but maps are not bundled for offline use.
 
-## Hackathon submission
-
-Trail fits **Good Neighbor Agents** by coordinating people around permission-based care: the agent reduces monitoring work for trusted contacts and invites limited community assistance while preserving precise location privacy.
-
-Use [Devpost draft](docs/devpost.md), [four-minute demo script](docs/demo-script.md), and [implementation status](IMPLEMENTATION_STATUS.md); public repository publication, video recording/upload, Builder ID entry, and Devpost submission remain human submission steps.
-
 ## License
 
 [MIT](LICENSE).
