@@ -4,7 +4,11 @@
 
 Trail is an AI-powered safety companion for runners, walkers, and joggers. It combines live location sharing, intelligent safety monitoring, trusted contacts, private route history, and a permission-based community network. Trail provides supplemental safety assistance and is not a replacement for emergency services.
 
+Try it out here: [Trail Live](https://trail.35-160-30-196.sslip.io/)
+
 ## Overview
+
+![Image](docs/screenshots/trail_screenshot_1.png)
 
 Going for a run alone should not require constantly sending location updates or asking someone to watch a map. Trail monitors a user's active session and looks for unusual events such as long stops, inactivity, or increased isolation. When something unusual happens, Trail can check whether the runner is okay before deciding whether trusted contacts should be notified.
 

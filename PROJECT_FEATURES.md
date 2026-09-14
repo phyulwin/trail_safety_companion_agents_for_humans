@@ -18,6 +18,8 @@ WebSockets provide live session updates between the backend and authorized users
 
 ### Trusted Contacts
 
+![Image](docs/screenshots/trail_screenshot_your_circle.png)
+
 Users can create a private circle of trusted friends and family.
 
 Selected contacts can follow an active Trail and view the runner's authorized:
@@ -63,6 +65,8 @@ An unanswered check-in can also be escalated after the configured timeout.
 
 ### Community Safety Network
 
+![Image](docs/screenshots/trail_screenshot_community.png)
+
 Users can optionally participate in Trail's community safety network.
 
 When the required safety and privacy conditions are met, Trail can identify up to five nearby verified community helpers.
@@ -72,6 +76,8 @@ Community members do **not** receive the runner's exact coordinates or identity.
 The current version uses simulated identity verification and simulated community members.
 
 ### 10-Day Trail History
+
+![Image](docs/screenshots/trail_screenshot_trail_history.png)
 
 Trail privately stores route history for up to 10 days.
 

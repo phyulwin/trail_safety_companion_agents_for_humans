@@ -2,6 +2,8 @@
 
 ## Architecture
 
+![Image](docs/screenshots/train_safety_companion_architecture_placeholder.png)
+
 ```mermaid
 flowchart LR
 
