@@ -1,4 +1,4 @@
-# Real implementation audit
+# Implementation audit
 
 Trail retains the existing FastAPI, React, SQLAlchemy, and SQLite architecture.
 The public deployment configuration forces `TRAIL_AGENT_MODE=bedrock`, and `PUBLIC_DEMO=true` refuses a mock provider.
