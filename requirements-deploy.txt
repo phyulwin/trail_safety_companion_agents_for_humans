@@ -1,0 +1,2 @@
+# requirements-deploy.txt - Install after backend/requirements.txt on the operator's machine.
+paramiko==5.0.0

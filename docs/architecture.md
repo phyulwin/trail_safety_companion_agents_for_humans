@@ -19,7 +19,7 @@ Both providers instantiate the installed Strands `Agent`, register twelve custom
 
 The offline provider is deliberately labelled deterministic; its bounded tool plan comes from engine evidence and policy eligibility, and it must not be represented as live LLM reasoning.
 
-The toolset includes session status, risk, anomaly, seclusion, approved recipient count, check-in creation, trusted-contact notification, nearby helper evaluation, coarse community alerts, route alternatives, lost-item route inspection, and decision logging; tool closures prevent the model from selecting another account or session, and sequential execution protects the shared transaction.
+The toolset includes session status, risk, anomaly, seclusion, approved recipient count, check-in creation, trusted-contact notification, nearby helper evaluation, coarse community alerts, route alternatives, lost-item route inspection, and decision logging; tool closures prevent the model from selecting another account or session, and each live tool reloads current state in its own short transaction.
 
 ## Explainable experimental engines
 
@@ -51,9 +51,9 @@ Required check-ins trigger for anomaly above 0.75 with a prolonged stop, or sust
 
 ## Persistence and deployment
 
-The SQLite MVP runs one Uvicorn worker and serializes mutations with an in-process lock; model invocation has a 12-second budget, so a slow provider can delay API writes within that window before deterministic fallback proceeds.
+The SQLite deployment runs one Uvicorn worker and serializes short mutations with an in-process lock; live inference runs outside database transactions with a 60-second budget and at most three concurrent agent tasks.
 
-This is a documented local-MVP tradeoff, not a production availability guarantee; production should move the watchdog to a durable scheduler/queue, use PostgreSQL transaction locks or conditional writes, execute inference outside user-facing transactions, and revalidate proposed actions at commit time.
+The public judging architecture uses persistent Lightsail disk, Docker Compose, Caddy HTTPS, and Nginx; every actual tool reloads session state and revalidates permissions before writing, while ended sessions reject late agent actions.
 
 An API restart resumes persisted active sessions and check-in deadlines; routes and all session-derived data are removed once the session start exceeds ten days, with cleanup at startup and at most sixty seconds between subsequent passes.
 

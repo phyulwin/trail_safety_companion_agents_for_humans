@@ -1,0 +1,4 @@
+# .gitattributes - Keep deployment scripts executable on Linux from Windows checkouts.
+*.sh text eol=lf
+Dockerfile text eol=lf
+*.yml text eol=lf

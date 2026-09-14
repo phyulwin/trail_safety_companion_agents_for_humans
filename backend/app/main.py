@@ -21,15 +21,26 @@ from app.services import safety
 logger = logging.getLogger("trail")
 
 
+# Each session has at most one inference task; pending calls never hold SQLite locks.
+in_flight: dict[str, asyncio.Task] = {}
+
+
 async def monitoring_tick() -> None:
-    """Recover persisted deadlines and advance sessions even when all browsers are closed."""
+    """Advance real sensor processing and schedule bounded, independent agent cycles."""
+    for session_id, task in list(in_flight.items()):
+        if task.done():
+            in_flight.pop(session_id, None)
     async with mutation_lock:
         with SessionLocal() as db:
             sessions = list(db.scalars(select(TrailSession).where(TrailSession.active.is_(True))))
             for session in sessions:
                 try:
                     now = time.time()
-                    changed = demo_tick(db, session, now)
+                    if session.is_demo and now - session.started_at > settings.demo_session_lifetime_seconds:
+                        safety.close_alerts(db, session, "Demo time limit reached; route saved in history.")
+                        session.active, session.ended_at, session.demo_scenario = False, now, None
+                        continue
+                    demo_tick(db, session, now)
                     if not session.is_demo:
                         inactivity = now - session.state.get("last_received_at", session.started_at)
                         session.state = {**session.state, "inactivity_seconds": round(inactivity)}
@@ -37,14 +48,22 @@ async def monitoring_tick() -> None:
                             session.state = {**session.state, "anomaly_score": 0.85}
                             session.current_status = "UNKNOWN"
                     expired = bool(session.checkin_deadline and now >= session.checkin_deadline)
-                    # Normal sensor events are batched; deadlines are evaluated every tick.
-                    if changed or expired or now - session.last_analyzed_at >= 20:
-                        await TrailSafetyAgent().analyze(db, session)
-                    safety.enforce_required_actions(db, session)
-                    db.commit()
+                    due = safety.checkin_permitted(session, now) or expired
+                    # Completed demonstrations stop spending on repeated Bedrock calls.
+                    eligible = not session.is_demo or bool(session.demo_scenario)
+                    pending = in_flight.get(session.id)
+                    if pending and pending.done():
+                        in_flight.pop(session.id, None)
+                        pending = None
+                    interval = now - session.last_analyzed_at
+                    if eligible and not pending and len(in_flight) < settings.max_agent_concurrency and (due or interval >= settings.agent_interval_seconds):
+                        if session.state.get("last_location") and (interval >= 5 or not session.last_analyzed_at):
+                            session.last_analyzed_at = now
+                            task = asyncio.create_task(TrailSafetyAgent().analyze_live(session.id))
+                            in_flight[session.id] = task
                 except Exception:
-                    db.rollback()
                     logger.exception("Monitoring cycle failed for a session")
+            db.commit()
 
 
 async def monitor_loop() -> None:
@@ -74,6 +93,10 @@ async def lifespan(_app: FastAPI):
         yield
     finally:
         task.cancel()
+        for pending in in_flight.values():
+            pending.cancel()
+        await asyncio.gather(*in_flight.values(), return_exceptions=True)
+        in_flight.clear()
         with contextlib.suppress(asyncio.CancelledError):
             await task
 
@@ -101,7 +124,7 @@ async def browser_security(request: Request, call_next):
 @app.get("/health", tags=["System"])
 async def health():
     """Expose operational mode without secrets or account data."""
-    return {"status": "ok", "agent_mode": settings.trail_agent_mode, "demo_mode": settings.demo_mode,
+    return {"status": "ok", "agent_mode": settings.trail_agent_mode, "demo_mode": settings.demo_mode, "public_demo": settings.public_demo,
             "notification_delivery": "in-app", "identity_verification": "simulated", "environmental_provider": "demo or unavailable"}
 
 

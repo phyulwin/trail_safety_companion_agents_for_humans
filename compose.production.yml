@@ -1,0 +1,41 @@
+# compose.production.yml - Persistent single-host deployment; only HTTPS ingress is public.
+name: trail
+services:
+  backend:
+    build: ./backend
+    env_file: .env.production
+    environment:
+      DATABASE_URL: sqlite:////data/trail.db
+      TRAIL_AGENT_MODE: bedrock
+      PUBLIC_DEMO: "true"
+      COOKIE_SECURE: "true"
+      CORS_ORIGINS: https://${TRAIL_HOST:?Set TRAIL_HOST}
+    volumes:
+      - trail-data:/data
+    restart: unless-stopped
+    mem_limit: 900m
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}
+  frontend:
+    build: ./frontend
+    depends_on:
+      backend: {condition: service_healthy}
+    restart: unless-stopped
+    mem_limit: 128m
+  https:
+    image: caddy:2.10.2-alpine
+    environment:
+      TRAIL_HOST: ${TRAIL_HOST:?Set TRAIL_HOST}
+    ports: ["80:80", "443:443"]
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on: [frontend]
+    restart: unless-stopped
+    mem_limit: 128m
+volumes:
+  trail-data:
+  caddy-data:
+  caddy-config:

@@ -23,3 +23,9 @@ main{padding:37px 39px 0;max-width:1600px;margin:0 auto}.page-heading{display:fl
 .agent-signals{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:0 0 18px;position:relative;z-index:1}.agent-signals span{font-size:9px;color:#b5c3a9;display:flex;flex-direction:column;gap:7px}.agent-signals strong{font-size:17px;font-weight:450;color:#e2eacd}.agent-signals span:has(strong:only-child){line-height:1.5}
 @media(max-width:420px){.session-controls{gap:7px;padding:14px 11px;flex-wrap:wrap}.session-controls .button{padding:11px 13px}.session-controls .connection{font-size:7px}.session-controls .control-note{flex:1;min-width:130px}.session-controls .icon-button{width:28px}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+
+/* Keep actual tool evidence readable without overflowing small screens. */
+.tool-audit {padding: 18px; border-top: 1px solid #e6e8e4;}
+.tool-audit summary {cursor: pointer; font-size: 13px;}
+.tool-audit > div {margin-top: 14px; font-size: 12px;}
+.tool-audit pre {white-space: pre-wrap; overflow-wrap: anywhere; max-height: 180px; overflow: auto;}

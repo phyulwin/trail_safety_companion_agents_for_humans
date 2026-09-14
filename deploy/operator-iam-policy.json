@@ -1,0 +1,9 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [{
+    "Sid": "ConfigureTrailRuntimeIdentity",
+    "Effect": "Allow",
+    "Action": ["iam:CreateUser", "iam:TagUser", "iam:PutUserPolicy", "iam:CreateAccessKey"],
+    "Resource": "arn:aws:iam::*:user/trail-live-demo-bedrock"
+  }]
+}

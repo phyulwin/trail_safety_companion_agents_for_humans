@@ -4,9 +4,10 @@ import time
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 from app.core.auth import passwords
+from app.core.config import settings
 from app.models import CommunityAlert, CommunityHelper, LocationPoint, TrailSession, TrustedContact, User
 from app.schemas import LocationInput
-from app.services.safety import close_alerts, event
+from app.services.safety import close_alerts, event, respond_to_checkin, respond_as_helper
 from app.services.sessions import ingest_location
 
 # This is illustrative Pasadena geometry, not a promise of pedestrian access.
@@ -61,7 +62,11 @@ def demo_tick(db: Session, session: TrailSession, now: float) -> bool:
         ingest_location(db, session, LocationInput(latitude=lat, longitude=lon, timestamp=session.started_at + (step - 1) * 16 + stop), simulated=True)
         event(db, session, "DEMO_STOP", f"Simulated stationary sensor interval: {stop} seconds.")
     elif session.demo_scenario == "normal" and session.safety_state == "CHECK_IN":
-        close_alerts(db, session, "Simulated runner responded I'M OK; the check-in is closed.")
+        # Leave the real check-in visible for several WebSocket frames before synthetic OK.
+        opened_at = (session.checkin_deadline or now) - settings.checkin_timeout_seconds
+        if now - opened_at < 4:
+            return False
+        respond_to_checkin(db, session, "OK", "Simulated runner responded I'M OK; the check-in is closed.")
         # Resume movement so a completed normal demo cannot later re-alert on stale stop evidence.
         ingest_location(db, session, LocationInput(latitude=34.1506, longitude=-118.1453,
                          timestamp=session.state["last_sensor_at"] + 180), simulated=True)
@@ -69,9 +74,11 @@ def demo_tick(db: Session, session: TrailSession, now: float) -> bool:
         event(db, session, "DEMO_COMPLETE", "Normal demo complete: no contact escalation.")
     elif session.safety_state == "ESCALATED":
         alert = db.scalar(select(CommunityAlert).where(CommunityAlert.session_id == session.id, CommunityAlert.active.is_(True)))
+        # A contact alert alone is not a completed community-assistance demonstration.
+        if session.community_enabled and not alert:
+            return False
         if alert and alert.eligible_helpers and not alert.accepted_by:
-            alert.accepted_by = [alert.eligible_helpers[0]]
-            event(db, session, "HELPER_ACCEPTED", "One simulated verified helper is available; exact coordinates remain private.")
+            respond_as_helper(db, alert, db.get(User, alert.eligible_helpers[0]), "accept")
         session.demo_scenario = None
         event(db, session, "DEMO_COMPLETE", "Safety demo complete: contact alert and approximate community assistance.")
     elif session.safety_state == "MONITORING" and session.acknowledged_at:

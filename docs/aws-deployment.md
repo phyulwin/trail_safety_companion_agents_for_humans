@@ -1,5 +1,7 @@
 # AWS and Bedrock
 
+The current deployment guide is [AWS_DEPLOYMENT.md](../AWS_DEPLOYMENT.md), with measured results in [DEPLOYMENT_STATUS.md](../DEPLOYMENT_STATUS.md).
+
 ## Local Bedrock provider
 
 1. Configure an AWS CLI profile or an IAM role with permission to invoke your chosen Bedrock model; complete the model's access requirements in the AWS account and region.
@@ -18,11 +20,11 @@ The supplied Docker Compose configuration is for a local single-worker deploymen
 
 Set `COOKIE_SECURE=true` behind HTTPS, keep the API internal to the reverse proxy, and use one API worker until database scheduling and concurrency are redesigned; Docker Compose deliberately binds the frontend to loopback by default.
 
-AWS resources, IAM policies, public endpoints, and TLS certificates are not created by this repository; live cloud hosting requires an account-specific infrastructure review and deployment.
+The Lightsail scripts now provision a persistent single-host deployment with Caddy HTTPS, Nginx, and Docker Compose; the status document distinguishes verified work from remaining AWS account steps.
 
 ## Optional AgentCore path
 
-AgentCore Runtime is not implemented or claimed as deployed because the present tool closures and watchdog depend on a local SQLAlchemy transaction; packaging that process unchanged would not create a durable distributed safety service.
+AgentCore Runtime is not used by this deployment; live inference runs outside database write locks, and actual tools reload authorized session state in short transactions.
 
 The appropriate next step is to separate sanitized agent inference from state mutation, expose authenticated idempotent backend tools over a secure boundary, place deadlines on a durable scheduler, and use PostgreSQL or DynamoDB conditional state changes before deploying the agent runtime.
 

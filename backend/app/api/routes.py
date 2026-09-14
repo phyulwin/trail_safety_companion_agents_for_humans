@@ -1,13 +1,13 @@
 # api/routes.py - Authenticated FastAPI routes for Trail's complete MVP workflow.
-import asyncio
 import time
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from app.core.auth import current_user, issue_token, passwords, throttle
 from app.core.config import settings
 from app.core.db import get_db
+from app.core.concurrency import mutation_lock
 from app.models import CommunityAlert, CommunityHelper, LostItemSearch, TrailSession, TrustedContact, User
 from app.schemas import CheckinResponse, ContactInput, Credentials, DemoInput, HelperInput, LocationInput, LostItemInput, ProfileUpdate, Register, SessionInput
 from app.ml.engines import lost_item_points
@@ -17,7 +17,6 @@ from app.services.sessions import authorized_session, public_alert, public_sessi
 from app.services.sessions import ingest_location
 
 router = APIRouter()
-mutation_lock = asyncio.Lock()
 
 
 def profile(user: User) -> dict:
@@ -140,6 +139,15 @@ def create_session(db: Session, user: User, data: SessionInput, is_demo: bool = 
     """Enforce a single active Trail and validate selected recipients."""
     if db.scalar(select(TrailSession).where(TrailSession.user_id == user.id, TrailSession.active.is_(True))):
         raise HTTPException(409, "End your current Trail before starting another")
+    if settings.public_demo and not is_demo:
+        raise HTTPException(403, "This public judging demo accepts simulated routes only; GPS permission is not needed")
+    active_count = db.scalar(select(func.count()).select_from(TrailSession).where(TrailSession.active.is_(True)))
+    if active_count >= settings.max_active_sessions:
+        raise HTTPException(429, "The demo is at capacity; please try again shortly")
+    recent = db.scalar(select(func.count()).select_from(TrailSession).where(
+        TrailSession.is_demo.is_(True), TrailSession.started_at >= time.time() - 3600))
+    if is_demo and recent >= settings.max_demo_starts_per_hour:
+        raise HTTPException(429, "The hourly demo limit was reached; please try again later")
     approved = set(db.scalars(select(TrustedContact.contact_id).where(TrustedContact.user_id == user.id)))
     if not set(data.share_with).issubset(approved):
         raise HTTPException(422, "Choose only approved trusted contacts")
@@ -245,11 +253,7 @@ async def checkin_response(session_id: str, data: CheckinResponse, user: User = 
         session = authorized_session(db, session_id, user, True)
         if not session.active:
             raise HTTPException(409, "This Trail has ended")
-        if data.response == "OK":
-            safety.close_alerts(db, session, "Runner confirmed I'M OK; the safety request is closed.")
-        else:
-            session.safety_state = "HELP_REQUESTED"
-            safety.enforce_required_actions(db, session)
+        safety.respond_to_checkin(db, session, data.response)
         db.commit()
         return public_session(db, session)
 
@@ -320,11 +324,7 @@ async def respond_community(alert_id: str, action: str, user: User = Depends(cur
         alert = db.get(CommunityAlert, alert_id)
         if not alert or not alert.active or user.id not in alert.eligible_helpers or not user.verified or not user.community_opt_in:
             raise HTTPException(404, "Alert not found")
-        if action == "accept" and user.id not in alert.accepted_by:
-            alert.accepted_by = [*alert.accepted_by, user.id]
-            safety.event(db, db.get(TrailSession, alert.session_id), "HELPER_ACCEPTED", "A verified helper is available; exact location remains private.")
-        elif action == "dismiss":
-            alert.dismissed_by = list(set([*alert.dismissed_by, user.id]))
+        safety.respond_as_helper(db, alert, user, action)
         db.commit()
         return public_alert(alert)
 

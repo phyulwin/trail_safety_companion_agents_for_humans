@@ -30,7 +30,7 @@ export function TrailMap({session, suggestions = [], zone}: {session?: TrailSess
   const route: LatLngExpression[] = zone ? [] : session ? session.points.map(p => [p.latitude, p.longitude]) : preview;
   const current = route.at(-1);
   return <MapContainer center={[34.1519, -118.1453]} zoom={15} scrollWheelZoom={false} className="trail-map" aria-label={zone ? 'Approximate community assistance area' : 'Trail route map'}>
-    <TileLayer attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' url="https://tile.openstreetmap.org/{z}/{x}/{y}.png" />
+    <TileLayer referrerPolicy="strict-origin" attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' url="https://tile.openstreetmap.org/{z}/{x}/{y}.png" />
     <MapFrame session={session} zone={zone}/>
     {route.length > 0 && <Polyline positions={route} pathOptions={{color: '#d16a40', weight: 6, opacity: 0.9, dashArray: session ? undefined : '8 10'}}/>}
     {route[0] && <CircleMarker center={route[0]} radius={7} pathOptions={{color: '#fff', fillColor: '#263f36', fillOpacity: 1, weight: 3}}><Tooltip>Trail start</Tooltip></CircleMarker>}

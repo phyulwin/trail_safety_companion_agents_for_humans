@@ -1,11 +1,15 @@
 # services/safety.py - Deterministic authorization gates for every agent side effect.
 import math
 import time
+from contextvars import ContextVar
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.models import AgentDecision, CommunityAlert, CommunityHelper, SafetyEvent, TrailSession, TrustedContact, User
 from app.ml.engines import distance_m, safer_route
+
+# Only actual Strands tool execution changes this origin to the configured provider.
+action_origin: ContextVar[str] = ContextVar("trail_action_origin", default="policy")
 
 
 def event(db: Session, session: TrailSession, kind: str, description: str, severity: str = "info", recipients: list | None = None) -> None:
@@ -17,7 +21,7 @@ def decision(db: Session, session: TrailSession, action: str, explanation: str, 
     """Persist a sanitized state that has no names, coordinates, or contact details."""
     state = {key: session.state.get(key) for key in ("risk_score", "anomaly_score", "seclusion_score", "stop_duration_seconds", "inactivity_seconds", "source")}
     db.add(AgentDecision(session_id=session.id, action=action, explanation=explanation[:1000], input_state=state,
-                         mode=mode or settings.trail_agent_mode, metrics=metrics or {}))
+                         mode=mode or action_origin.get(), metrics=metrics or {}))
 
 
 def approved_contacts(db: Session, session: TrailSession) -> list[str]:
@@ -118,6 +122,30 @@ def close_alerts(db: Session, session: TrailSession, reason: str) -> None:
     for alert in db.scalars(select(CommunityAlert).where(CommunityAlert.session_id == session.id)):
         alert.active = False
     event(db, session, "RESOLVED", reason)
+
+
+def respond_to_checkin(db: Session, session: TrailSession, response: str, reason: str = "Runner confirmed I'M OK; the safety request is closed.") -> None:
+    """Apply the same response policy to browser and simulated human input."""
+    if not session.active or response not in ("OK", "HELP"):
+        raise ValueError("An active session and a valid response are required")
+    if response == "OK":
+        close_alerts(db, session, reason)
+    else:
+        session.safety_state = "HELP_REQUESTED"
+        enforce_required_actions(db, session)
+
+
+def respond_as_helper(db: Session, alert: CommunityAlert, helper: User, action: str) -> None:
+    """Revalidate helper eligibility without unlocking precise coordinates."""
+    if not alert.active or helper.id not in alert.eligible_helpers or not helper.verified or not helper.community_opt_in:
+        raise ValueError("Helper is not eligible")
+    if action == "accept" and helper.id not in alert.accepted_by:
+        alert.accepted_by = [*alert.accepted_by, helper.id]
+        event(db, db.get(TrailSession, alert.session_id), "HELPER_ACCEPTED", "A verified helper is available; exact location remains private.")
+    elif action == "dismiss":
+        alert.dismissed_by = list(set([*alert.dismissed_by, helper.id]))
+    elif action != "accept":
+        raise ValueError("Unknown helper response")
 
 
 def enforce_required_actions(db: Session, session: TrailSession) -> None:

@@ -6,6 +6,8 @@ __pycache__/
 *.db-shm
 *.db-wal
 .env
+.env.production
+.env.container
 node_modules/
 dist/
 *.log

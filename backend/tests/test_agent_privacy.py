@@ -111,7 +111,8 @@ def test_automated_normal_and_safety_scenarios(db, account):
         db.commit()
         for _ in range(18):
             session.demo_next_at = 0
-            changed = demo_tick(db, session, time.time())
+            tick_time = time.time() + 5 if scenario == "normal" and session.checkin_deadline else time.time()
+            changed = demo_tick(db, session, tick_time)
             if changed:
                 asyncio.run(TrailSafetyAgent().analyze(db, session))
             if scenario == "safety" and session.checkin_deadline:

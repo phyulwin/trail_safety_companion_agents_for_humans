@@ -72,7 +72,7 @@ def public_session(db: Session, session: TrailSession, include_route: bool = Tru
     """This precise serializer is used only after owner/contact authorization."""
     owner = db.get(User, session.user_id)
     events = list(db.scalars(select(SafetyEvent).where(SafetyEvent.session_id == session.id).order_by(SafetyEvent.created_at.desc()).limit(80)))
-    decisions = list(db.scalars(select(AgentDecision).where(AgentDecision.session_id == session.id).order_by(AgentDecision.created_at.desc()).limit(50)))
+    decisions = list(db.scalars(select(AgentDecision).where(AgentDecision.session_id == session.id).order_by(AgentDecision.created_at.desc()).limit(120)))
     all_points = route_points(db, session.id)
     points = all_points if include_route else []
     preview = all_points[::max(1, len(all_points) // 24)]

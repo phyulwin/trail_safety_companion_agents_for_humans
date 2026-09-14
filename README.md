@@ -16,6 +16,10 @@ Important Project Information:
 
 - [Trail's Safety Agent](/PROJECT_AGENT.md)
 
+- [AWS Deployment Guide](AWS_DEPLOYMENT.md)
+
+- [Deployment Status](DEPLOYMENT_STATUS.md)
+
 ## Features Overview
 
 - Live Trail Tracking

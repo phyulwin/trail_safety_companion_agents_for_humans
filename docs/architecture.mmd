@@ -1,0 +1,15 @@
+%% architecture.mmd - Single-instance architecture with real model-selected tools.
+flowchart LR
+    Browser[React browser] --> TLS[Caddy HTTPS]
+    TLS --> Nginx[Nginx frontend / API / WebSockets]
+    Nginx --> API[FastAPI single worker]
+    Input[Simulated GPS and environment] --> API
+    API --> Engines[Risk / motion anomaly / seclusion]
+    Engines --> DB[(Persistent SQLite)]
+    Watchdog[One-second watchdog] --> Agent[Strands Agent]
+    Agent <--> Bedrock[Amazon Bedrock]
+    Agent --> Tools[Scoped tool functions]
+    Tools --> Gates[Fresh state / consent / deadline checks]
+    Gates --> DB
+    DB --> WS[Authorized WebSocket snapshots]
+    WS --> Browser
